@@ -32,7 +32,7 @@ class ProductSeeder extends Seeder
         return [
             [
                 'name' => 'Argus G3',
-                'price' => 109,
+                'price' => 97000,
                 'tag' => 'New arrival',
                 'category' => 'Case',
                 'color' => 'bg-stone-200',
@@ -52,7 +52,7 @@ class ProductSeeder extends Seeder
             ],
             [
                 'name' => 'Xlim Pro 2',
-                'price' => 149,
+                'price' => 109000,
                 'tag' => 'Featured',
                 'category' => 'Case',
                 'color' => 'bg-orange-100',
@@ -72,7 +72,7 @@ class ProductSeeder extends Seeder
             ],
             [
                 'name' => 'Xlim Pro 3',
-                'price' => 179,
+                'price' => 109000,
                 'tag' => 'Popular',
                 'category' => 'Case',
                 'color' => 'bg-slate-200',
@@ -92,7 +92,7 @@ class ProductSeeder extends Seeder
             ],
             [
                 'name' => 'Xros 5',
-                'price' => 199,
+                'price' => 109000,
                 'tag' => 'Top rated',
                 'category' => 'Case',
                 'color' => 'bg-neutral-200',

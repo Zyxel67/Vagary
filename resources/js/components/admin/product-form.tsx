@@ -101,7 +101,7 @@ export default function ProductForm({ product }: ProductFormProps) {
                 </div>
 
                 <div className="grid gap-2">
-                    <Label htmlFor="price">Price (USD)</Label>
+                    <Label htmlFor="price">Price (IDR)</Label>
                     <Input
                         id="price"
                         type="number"
@@ -110,7 +110,7 @@ export default function ProductForm({ product }: ProductFormProps) {
                         className="mt-1 block w-full"
                         value={data.price}
                         onChange={(event) => setData('price', event.target.value)}
-                        placeholder="109"
+                        placeholder="109000"
                         required
                     />
                     <p className="text-xs text-neutral-500 dark:text-neutral-400">Displayed as {pricePreview}</p>

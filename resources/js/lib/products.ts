@@ -6,7 +6,7 @@ export type ProductSpec = {
 export type Product = {
     id: number;
     name: string;
-    /** Whole US dollars. Use `formatPrice` for display. */
+    /** Whole rupiah amounts. Use `formatPrice` for display. */
     price: number;
     tag: string;
     category: string;
@@ -27,5 +27,10 @@ export const tagOptions = ['New arrival', 'Featured', 'Popular', 'Top rated'];
 export const categoryOptions = ['Case'];
 export const colorOptions = ['bg-stone-200', 'bg-orange-100', 'bg-slate-200', 'bg-neutral-200', 'bg-amber-100', 'bg-rose-100'];
 
-/** Format a whole-dollar price for display, e.g. 109 -> "$109". */
-export const formatPrice = (price: number) => `$${Number(price).toLocaleString('en-US')}`;
+/** Format a whole-rupiah price for display, e.g. 109000 -> "Rp 109.000". */
+export const formatPrice = (price: number) =>
+    new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        maximumFractionDigits: 0,
+    }).format(price);
