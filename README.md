@@ -41,7 +41,7 @@ Check these values in `.env`:
 | `DB_CONNECTION` | `mysql` |
 | `DB_DATABASE` | `vagary` |
 | `DB_USERNAME` / `DB_PASSWORD` | `root` / *(empty on a default XAMPP)* |
-| `APP_URL` | `http://vagary.test` |
+| `APP_URL` | `http://localhost` |
 
 ### 4. Apache vhost (avoids needing `php artisan serve`)
 
@@ -50,7 +50,7 @@ lives somewhere other than `htdocs\Vagary`:
 
 ```apache
 <VirtualHost *:80>
-    ServerName vagary.test
+    ServerName localhost
     DocumentRoot "C:/xampp/htdocs/Vagary/public"
 
     <Directory "C:/xampp/htdocs/Vagary/public">
@@ -61,14 +61,12 @@ lives somewhere other than `htdocs\Vagary`:
 </VirtualHost>
 ```
 
-Then add this line to `C:\Windows\System32\drivers\etc\hosts` **as Administrator**:
-
-```
-127.0.0.1 vagary.test
-```
-
 Restart Apache. `mod_rewrite` must be enabled (it is by default in XAMPP) because
 `public/.htaccess` needs it for pretty URLs.
+
+> **Why `localhost` and not a custom host like `vagary.test`?** Google OAuth refuses to
+> register redirect URIs on reserved TLDs such as `.test` — only `localhost` or a public
+> top-level domain are accepted. No `hosts` file entry is needed either.
 
 > No vhost? Then run `php artisan serve` and use `http://localhost:8000` — just remember to
 > set `APP_URL` to match.
@@ -86,7 +84,7 @@ npm run dev      # development, with HMR
 npm run build    # production
 ```
 
-Open **http://vagary.test**
+Open **http://localhost**
 
 ## Admin access
 
