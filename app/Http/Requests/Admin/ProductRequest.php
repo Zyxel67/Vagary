@@ -47,6 +47,8 @@ class ProductRequest extends FormRequest
             'specs' => $specs,
             'marketplace_url' => $this->filled('marketplace_url') ? trim((string) $this->input('marketplace_url')) : null,
             'is_featured' => $this->boolean('is_featured'),
+            'in_stock' => $this->boolean('in_stock'),
+            'sale_price' => $this->filled('sale_price') ? (int) $this->input('sale_price') : null,
         ]);
     }
 
@@ -61,7 +63,9 @@ class ProductRequest extends FormRequest
 
         return [
             'name' => ['required', 'string', 'max:120', Rule::unique('products', 'name')->ignore($productId)],
-            'price' => ['required', 'integer', 'min:0', 'max:1000000'],
+            // Prices are whole rupiah, so the ceiling is ~Rp 100 million rather
+            // than the old dollar-era one million.
+            'price' => ['required', 'integer', 'min:0', 'max:100000000'],
             'tag' => ['required', 'string', 'max:60'],
             'category' => ['required', 'string', 'max:60'],
             'color' => ['required', 'string', 'max:60'],
@@ -73,6 +77,11 @@ class ProductRequest extends FormRequest
             'specs.*.value' => ['required_with:specs.*.label', 'string', 'max:160'],
             'marketplace_url' => ['nullable', 'url', 'max:2048'],
             'is_featured' => ['boolean'],
+            // Toggling this off then on again is what triggers the restock email.
+            'in_stock' => ['boolean'],
+            // Must actually undercut the list price, otherwise it is not a sale
+            // and the storefront would show a misleading markdown.
+            'sale_price' => ['nullable', 'integer', 'min:0', 'max:100000000', 'lt:price'],
         ];
     }
 
@@ -87,6 +96,9 @@ class ProductRequest extends FormRequest
             'image.required' => 'Add a main image path or URL so the product has a photo.',
             'gallery.present' => 'Provide a gallery (it can be empty).',
             'marketplace_url.url' => 'The marketplace link must be a full URL, for example https://shopee.co.id/...',
+            'sale_price.lt' => 'The sale price must be lower than the regular price.',
+            'sale_price.integer' => 'The sale price must be a whole number of dollars.',
+            'sale_price.min' => 'The sale price cannot be negative.',
         ];
     }
 }

@@ -17,6 +17,10 @@ export type Product = {
     specs: ProductSpec[];
     marketplace_url: string | null;
     is_featured: boolean;
+    /** Whether it can be bought right now. Flipping this back to true sends restock emails. */
+    in_stock: boolean;
+    /** Discounted whole-rupiah price, or null when the product is not on sale. */
+    sale_price: number | null;
 };
 
 /**
@@ -34,3 +38,9 @@ export const formatPrice = (price: number) =>
         currency: 'IDR',
         maximumFractionDigits: 0,
     }).format(price);
+
+/** The price a buyer actually pays: the sale price when one is set. */
+export const effectivePrice = (product: Pick<Product, 'price' | 'sale_price'>) => product.sale_price ?? product.price;
+
+/** Whether a product is genuinely discounted below its list price. */
+export const isDiscounted = (product: Pick<Product, 'price' | 'sale_price'>) => product.sale_price !== null && product.sale_price < product.price;

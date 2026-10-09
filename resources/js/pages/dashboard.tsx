@@ -1,7 +1,8 @@
+import { Price } from '@/components/price';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import WelcomeModal from '@/components/welcome-modal';
-import { formatPrice, type Product } from '@/lib/products';
+import { type Product } from '@/lib/products';
 import type { User } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ArrowUpRight, LogIn, LogOut, Menu, Search, ShieldCheck, Sparkles, Volume2, Zap } from 'lucide-react';
@@ -385,7 +386,7 @@ export default function Dashboard({ products }: { products: Product[] }) {
                                                 <p className="text-lg font-semibold">{product.name}</p>
                                                 <p className="text-sm text-neutral-500">{product.category}</p>
                                             </div>
-                                            <p className="text-lg font-bold">{formatPrice(product.price)}</p>
+                                            <Price product={product} className="text-lg font-bold" />
                                         </div>
                                         <Link
                                             href={`${route('marketplace')}?product=${encodeURIComponent(product.name)}`}

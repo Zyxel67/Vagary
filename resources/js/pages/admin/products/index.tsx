@@ -1,3 +1,5 @@
+import AdminTabs from '@/components/admin/admin-tabs';
+import { Price, StockBadge } from '@/components/price';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -77,6 +79,8 @@ export default function AdminProducts({ products, stats }: { products: Product[]
                     </Button>
                 </div>
 
+                <AdminTabs />
+
                 {flash?.success && (
                     <div className="flex items-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-800 dark:text-emerald-300">
                         <CheckCircle2 className="h-4 w-4 shrink-0" />
@@ -155,7 +159,12 @@ export default function AdminProducts({ products, stats }: { products: Product[]
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3 font-semibold">{formatPrice(product.price)}</td>
+                                        <td className="px-4 py-3">
+                                            <Price product={product} className="font-semibold" />
+                                            <div className="mt-1">
+                                                <StockBadge product={product} />
+                                            </div>
+                                        </td>
                                         <td className="px-4 py-3">
                                             <Badge variant="secondary">{product.tag}</Badge>
                                         </td>

@@ -18,6 +18,8 @@ interface ResetPasswordForm {
     email: string;
     password: string;
     password_confirmation: string;
+    // Inertia's useForm requires an index signature on the form data shape.
+    [key: string]: string;
 }
 
 export default function ResetPassword({ token, email }: ResetPasswordProps) {

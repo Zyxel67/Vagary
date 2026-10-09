@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('products', function (Blueprint $table) {
             $table->id();
             $table->string('name')->unique();
-            // Whole US dollars so the storefront can format and sort reliably.
+            // Whole rupiah amounts so the storefront can format and sort reliably.
             $table->unsignedInteger('price');
             $table->string('tag');
             $table->string('category')->default('Case');

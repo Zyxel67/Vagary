@@ -2,6 +2,8 @@ import { LucideIcon } from 'lucide-react';
 
 export interface Auth {
     user: User;
+    /** True when the signed-in account may reach the admin panel. */
+    can_manage_products?: boolean;
 }
 
 export interface BreadcrumbItem {
@@ -37,6 +39,8 @@ export interface User {
     email: string;
     avatar?: string;
     is_admin?: boolean;
+    /** Marketing opt-in; drives restock, discount and promo emails. */
+    email_opt_in?: boolean;
     email_verified_at: string | null;
     created_at: string;
     updated_at: string;

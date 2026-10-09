@@ -44,6 +44,10 @@ class HandleInertiaRequests extends Middleware
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => [
                 'user' => $request->user(),
+                // Answer the manage-products gate once so the nav can show the
+                // admin tabs. The PHP gate is the single source of truth: it
+                // checks users.is_admin *and* VAGARY_ADMIN_EMAILS.
+                'can_manage_products' => fn () => $request->user()?->can('manage-products') ?? false,
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),

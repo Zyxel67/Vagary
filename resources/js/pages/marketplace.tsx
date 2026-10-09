@@ -1,17 +1,18 @@
+import { Price, StockBadge } from '@/components/price';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { formatPrice, type Product } from '@/lib/products';
+import { effectivePrice, formatPrice, type Product } from '@/lib/products';
 import type { User } from '@/types';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ArrowLeft, ExternalLink, GitCompareArrows, Heart, LogIn, LogOut, Menu, Search, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
-export default function Marketplace({ products: allProducts }: { products: Product[] }) {
+export default function Marketplace({ products: allProducts, wishlist }: { products: Product[]; wishlist: number[] }) {
     const { auth } = usePage().props as unknown as { auth: { user: User | null } };
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
     const [sortOption, setSortOption] = useState('featured');
-    const [savedItems, setSavedItems] = useState<string[]>([]);
+    const [savedItems, setSavedItems] = useState<number[]>(wishlist);
     const [showNotification, setShowNotification] = useState(false);
     const [notificationMessage, setNotificationMessage] = useState('');
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -43,12 +44,9 @@ export default function Marketplace({ products: allProducts }: { products: Produ
         }
 
         try {
-            const saved = JSON.parse(localStorage.getItem('vagary:saved-items') ?? '[]');
             const compared = JSON.parse(localStorage.getItem('vagary:compare-items') ?? '[]');
-            setSavedItems(Array.isArray(saved) ? saved : []);
             setCompareItems(Array.isArray(compared) ? compared.slice(0, 3) : []);
         } catch {
-            setSavedItems([]);
             setCompareItems([]);
         }
         setStorageReady(true);
@@ -56,12 +54,17 @@ export default function Marketplace({ products: allProducts }: { products: Produ
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // The server is the source of truth for the shortlist; mirror it whenever a
+    // visit hands us a fresh set of saved product ids.
+    useEffect(() => {
+        setSavedItems(wishlist);
+    }, [wishlist]);
+
     useEffect(() => {
         if (!storageReady) return;
 
-        localStorage.setItem('vagary:saved-items', JSON.stringify(savedItems));
         localStorage.setItem('vagary:compare-items', JSON.stringify(compareItems));
-    }, [compareItems, savedItems, storageReady]);
+    }, [compareItems, storageReady]);
 
     const filteredProducts = allProducts.filter((product) => {
         const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory || product.tag === selectedCategory;
@@ -82,12 +85,41 @@ export default function Marketplace({ products: allProducts }: { products: Produ
         return allProducts.indexOf(firstProduct) - allProducts.indexOf(secondProduct);
     });
 
-    const toggleSavedItem = (productName: string) => {
-        const isSaved = savedItems.includes(productName);
-        setSavedItems(isSaved ? savedItems.filter((item) => item !== productName) : [...savedItems, productName]);
-        setNotificationMessage(isSaved ? `${productName} removed from your shortlist.` : `${productName} saved to your shortlist.`);
+    const notify = (message: string) => {
+        setNotificationMessage(message);
         setShowNotification(true);
         setTimeout(() => setShowNotification(false), 2000);
+    };
+
+    /**
+     * Save or remove a product from the signed-in account's shortlist.
+     *
+     * Guests are nudged to log in instead of losing the tap silently — the
+     * shortlist lives on the account now, not in browser storage.
+     */
+    const toggleSavedItem = (product: Product) => {
+        if (!auth.user) {
+            notify('Log in to keep a wishlist on your account.');
+            return;
+        }
+
+        const isSaved = savedItems.includes(product.id);
+        const previous = savedItems;
+        setSavedItems(isSaved ? savedItems.filter((id) => id !== product.id) : [...savedItems, product.id]);
+
+        const options = {
+            preserveScroll: true,
+            preserveState: true,
+            onError: () => setSavedItems(previous),
+        };
+
+        if (isSaved) {
+            router.delete(route('wishlist.destroy', product.id), options);
+        } else {
+            router.post(route('wishlist.store', product.id), {}, options);
+        }
+
+        notify(isSaved ? `${product.name} removed from your wishlist.` : `${product.name} saved to your wishlist.`);
     };
 
     const openProduct = (product: Product) => {
@@ -321,22 +353,22 @@ export default function Marketplace({ products: allProducts }: { products: Produ
                         ) : (
                             <>
                                 <div className="flex-1 space-y-4 overflow-y-auto py-6">
-                                    {savedItems.map((productName) => {
-                                        const product = allProducts.find((item) => item.name === productName);
+                                    {savedItems.map((productId) => {
+                                        const product = allProducts.find((item) => item.id === productId);
                                         if (!product) return null;
 
                                         return (
-                                            <div key={productName} className="flex gap-4 border-b border-black/10 pb-4">
+                                            <div key={productId} className="flex gap-4 border-b border-black/10 pb-4">
                                                 <img src={product.image} alt={product.name} className="h-20 w-20 rounded-xl object-cover" />
                                                 <div className="min-w-0 flex-1">
                                                     <div className="flex items-start justify-between gap-3">
                                                         <p className="font-semibold">{product.name}</p>
-                                                        <p className="font-semibold">{formatPrice(product.price)}</p>
+                                                        <p className="font-semibold">{formatPrice(effectivePrice(product))}</p>
                                                     </div>
                                                     <p className="mt-1 text-sm text-neutral-500">{product.category} device</p>
                                                     <button
                                                         type="button"
-                                                        onClick={() => toggleSavedItem(productName)}
+                                                        onClick={() => toggleSavedItem(product)}
                                                         className="mt-3 text-xs font-semibold tracking-[0.16em] text-neutral-500 uppercase underline underline-offset-4 hover:text-neutral-950"
                                                     >
                                                         Remove from shortlist
@@ -405,7 +437,7 @@ export default function Marketplace({ products: allProducts }: { products: Produ
                                 )}
 
                                 {[
-                                    ['Price', (product: Product) => formatPrice(product.price)],
+                                    ['Price', (product: Product) => formatPrice(effectivePrice(product))],
                                     ['Category', (product: Product) => product.category],
                                     ['Collection mark', (product: Product) => product.tag],
                                     ...(comparisonProducts[0]?.specs.map(
@@ -496,7 +528,14 @@ export default function Marketplace({ products: allProducts }: { products: Produ
                                 {selectedProduct.category} collection
                             </p>
                             <h1 className="mt-3 text-4xl font-black tracking-[-0.06em] sm:text-5xl">{selectedProduct.name}</h1>
-                            <p className="mt-4 text-2xl font-semibold">{formatPrice(selectedProduct.price)}</p>
+                            <p className="mt-4 text-2xl font-semibold">
+                                <Price product={selectedProduct} />
+                            </p>
+                            {!selectedProduct.in_stock && (
+                                <p className="mt-2 text-sm font-medium text-neutral-500 dark:text-neutral-400">
+                                    Sold out right now — save it to your wishlist and we will email you when it is back.
+                                </p>
+                            )}
                             <p className="mt-6 max-w-lg text-base leading-7 text-neutral-600 dark:text-neutral-300">
                                 A considered leather essential, crafted for its character, durability, and place in your everyday carry.
                             </p>
@@ -519,11 +558,11 @@ export default function Marketplace({ products: allProducts }: { products: Produ
 
                             <button
                                 type="button"
-                                onClick={() => toggleSavedItem(selectedProduct.name)}
+                                onClick={() => toggleSavedItem(selectedProduct)}
                                 className="mt-8 inline-flex min-h-14 items-center justify-center gap-2 rounded-full border border-black/15 bg-white px-6 text-sm font-semibold text-neutral-900 transition hover:border-neutral-950 dark:border-white/15 dark:bg-neutral-900 dark:text-white dark:hover:border-white/40"
                             >
-                                <Heart className={`h-4 w-4 ${savedItems.includes(selectedProduct.name) ? 'fill-current' : ''}`} />
-                                {savedItems.includes(selectedProduct.name) ? 'Saved to shortlist' : 'Save to shortlist'}
+                                <Heart className={`h-4 w-4 ${savedItems.includes(selectedProduct.id) ? 'fill-current' : ''}`} />
+                                {savedItems.includes(selectedProduct.id) ? 'Saved to wishlist' : 'Save to wishlist'}
                             </button>
                             <button
                                 type="button"
@@ -631,6 +670,9 @@ export default function Marketplace({ products: allProducts }: { products: Produ
                                             <span className="absolute top-3 left-3 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold tracking-[0.2em] text-neutral-800 uppercase">
                                                 {product.tag}
                                             </span>
+                                            <span className="absolute top-3 right-3">
+                                                <StockBadge product={product} />
+                                            </span>
                                         </div>
                                         <div className="space-y-4 p-2 pt-4">
                                             <div className="flex items-start justify-between gap-4">
@@ -638,18 +680,18 @@ export default function Marketplace({ products: allProducts }: { products: Produ
                                                     <p className="text-lg font-semibold">{product.name}</p>
                                                     <p className="text-sm text-neutral-500">{product.category}</p>
                                                 </div>
-                                                <p className="text-lg font-bold">{formatPrice(product.price)}</p>
+                                                <Price product={product} className="text-lg font-bold" />
                                             </div>
                                             <div className="grid grid-cols-2 gap-2">
                                                 <button
                                                     onClick={(event) => {
                                                         event.stopPropagation();
-                                                        toggleSavedItem(product.name);
+                                                        toggleSavedItem(product);
                                                     }}
                                                     className="inline-flex items-center justify-center gap-2 rounded-full bg-neutral-950 px-3 py-2.5 text-sm font-medium text-white transition hover:bg-neutral-800"
                                                 >
-                                                    <Heart className={`h-4 w-4 ${savedItems.includes(product.name) ? 'fill-current' : ''}`} />
-                                                    {savedItems.includes(product.name) ? 'Saved' : 'Save'}
+                                                    <Heart className={`h-4 w-4 ${savedItems.includes(product.id) ? 'fill-current' : ''}`} />
+                                                    {savedItems.includes(product.id) ? 'Saved' : 'Save'}
                                                 </button>
                                                 <button
                                                     onClick={(event) => {

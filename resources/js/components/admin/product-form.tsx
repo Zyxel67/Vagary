@@ -1,5 +1,6 @@
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { categoryOptions, colorOptions, formatPrice, tagOptions, type Product } from '@/lib/products';
@@ -41,6 +42,8 @@ export default function ProductForm({ product }: ProductFormProps) {
         specs: product?.specs ?? [{ label: 'Format', value: 'Protective case' }],
         marketplace_url: product?.marketplace_url ?? '',
         is_featured: product?.is_featured ?? true,
+        in_stock: product?.in_stock ?? true,
+        sale_price: product?.sale_price != null ? String(product.sale_price) : '',
     });
 
     const fieldErrors = errors as Record<string, string>;
@@ -84,6 +87,13 @@ export default function ProductForm({ product }: ProductFormProps) {
 
     const pricePreview = Number(data.price) > 0 ? formatPrice(Number(data.price)) : '—';
 
+    // A sale price only counts as a discount when it genuinely undercuts the
+    // list price, mirroring Product::isDiscounted() on the server.
+    const discountPercent =
+        Number(data.sale_price) > 0 && Number(data.price) > 0 && Number(data.sale_price) < Number(data.price)
+            ? Math.round((1 - Number(data.sale_price) / Number(data.price)) * 100)
+            : null;
+
     return (
         <form onSubmit={submit} className="space-y-6">
             <Panel title="Identity" description="How the product is named, priced and filtered across the storefront.">
@@ -115,6 +125,48 @@ export default function ProductForm({ product }: ProductFormProps) {
                     />
                     <p className="text-xs text-neutral-500 dark:text-neutral-400">Displayed as {pricePreview}</p>
                     <InputError className="mt-1" message={fieldErrors.price} />
+                </div>
+
+                <div className="grid gap-2">
+                    <Label htmlFor="sale_price">Sale price (IDR)</Label>
+                    <Input
+                        id="sale_price"
+                        type="number"
+                        min={0}
+                        step={1}
+                        className="mt-1 block w-full"
+                        value={data.sale_price}
+                        onChange={(event) => setData('sale_price', event.target.value)}
+                        placeholder="Leave empty for no discount"
+                    />
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400">Optional. Wishlisters get an email when it drops.</p>
+                    <div className="flex items-center justify-between gap-3 text-xs">
+                        <InputError className="mt-1" message={fieldErrors.sale_price} />
+                        <span className="font-semibold text-amber-700 dark:text-amber-400">
+                            {discountPercent ? `-${discountPercent}%` : 'No discount'}
+                        </span>
+                    </div>
+                </div>
+
+                <div className="grid gap-2">
+                    <Label htmlFor="in_stock">Availability</Label>
+                    <label
+                        htmlFor="in_stock"
+                        className="flex cursor-pointer items-start gap-3 rounded-xl border border-black/10 bg-white/60 p-3 dark:border-white/10 dark:bg-neutral-900/60"
+                    >
+                        <Checkbox
+                            id="in_stock"
+                            checked={data.in_stock}
+                            onCheckedChange={(checked) => setData('in_stock', checked === true)}
+                            className="mt-0.5"
+                        />
+                        <span className="min-w-0">
+                            <span className="block text-sm font-semibold">In stock</span>
+                            <span className="mt-0.5 block text-xs text-neutral-500 dark:text-neutral-400">
+                                Untick to mark it sold out. Ticking it back on emails everyone who saved it.
+                            </span>
+                        </span>
+                    </label>
                 </div>
 
                 <div className="grid gap-2">
