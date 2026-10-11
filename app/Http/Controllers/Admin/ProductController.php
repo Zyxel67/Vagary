@@ -10,6 +10,8 @@ use App\Models\WishlistItem;
 use App\Notifications\ProductPriceDropNotification;
 use App\Notifications\ProductRestockedNotification;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -44,7 +46,7 @@ class ProductController extends Controller
      */
     public function store(ProductRequest $request): RedirectResponse
     {
-        $product = Product::query()->create($request->validated());
+        $product = Product::query()->create($this->resolveProductImages($request, $request->validated()));
 
         return to_route('admin.products.index')->with('success', "\"{$product->name}\" was added to the catalogue.");
     }
@@ -69,11 +71,67 @@ class ProductController extends Controller
         $wasInStock = (bool) $product->in_stock;
         $previousPrice = $product->effectivePrice();
 
-        $product->update($request->validated());
+        $product->update($this->resolveProductImages($request, $request->validated(), $product));
 
         $this->dispatchProductAlerts($product, $wasInStock, $previousPrice);
 
         return to_route('admin.products.index')->with('success', "\"{$product->name}\" was updated.");
+    }
+
+    /**
+     * Turn freshly uploaded images into public URLs, replacing the path fields
+     * the form also submits.
+     *
+     * Stored values keep the same shape as the seeded `/images/case/...` paths
+     * (a leading slash), so every downstream `<img src>` works unchanged.
+     *
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    private function resolveProductImages(ProductRequest $request, array $validated, ?Product $product = null): array
+    {
+        if ($request->hasFile('image_file')) {
+            $previous = $product?->image ?? $validated['image'] ?? null;
+            $validated['image'] = $this->storeProductImage($request->file('image_file'));
+            $this->forgetStoredImage($previous);
+        }
+
+        if ($request->hasFile('gallery_files')) {
+            $uploaded = array_values(array_map(
+                fn ($file): string => $this->storeProductImage($file),
+                $request->file('gallery_files'),
+            ));
+
+            // Appended, not replaced, so editing an existing product keeps the
+            // gallery it already had instead of silently wiping it.
+            $validated['gallery'] = array_values(array_merge($validated['gallery'] ?? [], $uploaded));
+        }
+
+        // These keys only exist to carry the uploads; the model has no columns
+        // for them and they must not reach create()/update().
+        unset($validated['image_file'], $validated['gallery_files']);
+
+        return $validated;
+    }
+
+    /**
+     * Store an uploaded image on the public disk and return its public URL.
+     */
+    private function storeProductImage(UploadedFile $file): string
+    {
+        return '/storage/'.$file->store('products', 'public');
+    }
+
+    /**
+     * Remove a file we uploaded, leaving seeded paths and remote URLs alone.
+     */
+    private function forgetStoredImage(?string $path): void
+    {
+        if ($path === null || ! str_starts_with($path, '/storage/products/')) {
+            return;
+        }
+
+        Storage::disk('public')->delete(substr($path, strlen('/storage/')));
     }
 
     /**
@@ -114,6 +172,14 @@ class ProductController extends Controller
     public function destroy(Product $product): RedirectResponse
     {
         $name = $product->name;
+
+        // Only files under /storage/products are touched; seeded catalogue
+        // images in /images stay on disk.
+        $this->forgetStoredImage($product->image);
+        foreach ($product->gallery ?? [] as $path) {
+            $this->forgetStoredImage($path);
+        }
+
         $product->delete();
 
         return to_route('admin.products.index')->with('success', "\"{$name}\" was deleted.");

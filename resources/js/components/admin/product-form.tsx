@@ -3,10 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { categoryOptions, colorOptions, formatPrice, tagOptions, type Product } from '@/lib/products';
+import { categoryOptions, colorOptions, formatPrice, resolveImageUrl, tagOptions, type Product } from '@/lib/products';
 import { Link, useForm } from '@inertiajs/react';
 import { ImagePlus, Plus, Save, Trash2 } from 'lucide-react';
-import { FormEventHandler } from 'react';
+import { FormEventHandler, useEffect, useState } from 'react';
 
 /**
  * Shared create/edit form for a catalogue product.
@@ -38,7 +38,9 @@ export default function ProductForm({ product }: ProductFormProps) {
         category: product?.category ?? categoryOptions[0],
         color: product?.color ?? colorOptions[0],
         image: product?.image ?? '',
+        image_file: null as File | null,
         gallery: product?.gallery ?? [],
+        gallery_files: [] as File[],
         specs: product?.specs ?? [{ label: 'Format', value: 'Protective case' }],
         marketplace_url: product?.marketplace_url ?? '',
         is_featured: product?.is_featured ?? true,
@@ -47,6 +49,24 @@ export default function ProductForm({ product }: ProductFormProps) {
     });
 
     const fieldErrors = errors as Record<string, string>;
+
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+    // Object URLs are revoked when replaced or cleared, otherwise cycling
+    // through candidate photos leaks one blob per pick for the tab's lifetime.
+    useEffect(
+        () => () => {
+            if (imagePreview) {
+                URL.revokeObjectURL(imagePreview);
+            }
+        },
+        [imagePreview],
+    );
+
+    const selectImageFile = (file: File | null) => {
+        setData('image_file', file);
+        setImagePreview(file ? URL.createObjectURL(file) : null);
+    };
 
     const submit: FormEventHandler = (event) => {
         event.preventDefault();
@@ -222,22 +242,42 @@ export default function ProductForm({ product }: ProductFormProps) {
 
             <Panel title="Photography" description="The hero shot, its backdrop tint and the gallery shown on the product page.">
                 <div className="grid gap-2 sm:col-span-2">
-                    <Label htmlFor="image">Main image</Label>
+                    <Label htmlFor="image_file">Main image</Label>
+                    <Input
+                        id="image_file"
+                        type="file"
+                        accept="image/*"
+                        className="mt-1 block w-full file:mr-3 file:rounded-lg file:border-0 file:bg-neutral-900 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white dark:file:bg-white dark:file:text-neutral-900"
+                        onChange={(event) => selectImageFile(event.target.files?.[0] ?? null)}
+                    />
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                        JPG, PNG, WebP, GIF or AVIF, up to 5 MB.
+                        {product ? ' Leave empty to keep the current photo.' : ''}
+                    </p>
+                    <InputError className="mt-1" message={fieldErrors.image_file} />
+
+                    <Label htmlFor="image" className="mt-2">
+                        Or an existing path
+                    </Label>
                     <Input
                         id="image"
                         className="mt-1 block w-full font-mono text-xs"
                         value={data.image}
                         onChange={(event) => setData('image', event.target.value)}
                         placeholder="/images/case/Argus%20G3/IMG-20250708-WA0001.jpg"
-                        required
                     />
                     <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                        A path inside <code>/public</code> or a full image URL.
+                        A path inside <code>/public</code> or a full URL. Ignored when a file is chosen above.
                     </p>
                     <InputError className="mt-1" message={fieldErrors.image} />
-                    {data.image && (
+
+                    {(imagePreview ?? resolveImageUrl(data.image)) && (
                         <div className={`mt-2 overflow-hidden rounded-2xl border border-black/10 p-3 ${data.color}`}>
-                            <img src={data.image} alt="Main preview" className="h-44 w-full rounded-xl bg-white object-contain" />
+                            <img
+                                src={imagePreview ?? resolveImageUrl(data.image)}
+                                alt="Main preview"
+                                className="h-44 w-full rounded-xl bg-white object-contain"
+                            />
                         </div>
                     )}
                 </div>
@@ -271,6 +311,35 @@ export default function ProductForm({ product }: ProductFormProps) {
                             <ImagePlus className="h-4 w-4" />
                             Add image
                         </Button>
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label htmlFor="gallery_files">Upload more</Label>
+                        <Input
+                            id="gallery_files"
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="mt-1 block w-full file:mr-3 file:rounded-lg file:border-0 file:bg-neutral-900 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white dark:file:bg-white dark:file:text-neutral-900"
+                            onChange={(event) => setData('gallery_files', event.target.files ? Array.from(event.target.files) : [])}
+                        />
+                        <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                            Pick several at once. They are appended to the gallery below when you save.
+                        </p>
+                        <InputError className="mt-1" message={fieldErrors['gallery_files.*'] ?? fieldErrors.gallery_files} />
+
+                        {data.gallery_files.length > 0 && (
+                            <ul className="flex flex-wrap gap-2">
+                                {data.gallery_files.map((file, index) => (
+                                    <li
+                                        key={`${file.name}-${index}`}
+                                        className="max-w-full truncate rounded-full border border-black/10 bg-white/70 px-3 py-1 text-xs font-medium text-neutral-600 dark:border-white/15 dark:bg-neutral-900/70 dark:text-neutral-300"
+                                    >
+                                        {file.name}
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
                     </div>
 
                     {data.gallery.length === 0 ? (

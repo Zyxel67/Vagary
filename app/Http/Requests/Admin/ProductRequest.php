@@ -8,6 +8,16 @@ use Illuminate\Validation\Rule;
 class ProductRequest extends FormRequest
 {
     /**
+     * Shared rules for a single uploaded image.
+     *
+     * MIME types are sniffed from the file contents (fileinfo), so a renamed
+     * executable cannot slip past by claiming to be a JPG.
+     *
+     * @var list<string>
+     */
+    public const IMAGE_RULES = ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,gif,avif', 'max:5120'];
+
+    /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
@@ -42,7 +52,9 @@ class ProductRequest extends FormRequest
             'tag' => trim((string) $this->input('tag')),
             'category' => trim((string) $this->input('category')),
             'color' => trim((string) $this->input('color')),
-            'image' => trim((string) $this->input('image')),
+            // A freshly uploaded file stands in for the path field, so clear it
+            // rather than letting the empty text input fail the required rule.
+            'image' => $this->hasFile('image_file') ? null : trim((string) $this->input('image')),
             'gallery' => $gallery,
             'specs' => $specs,
             'marketplace_url' => $this->filled('marketplace_url') ? trim((string) $this->input('marketplace_url')) : null,
@@ -69,9 +81,13 @@ class ProductRequest extends FormRequest
             'tag' => ['required', 'string', 'max:60'],
             'category' => ['required', 'string', 'max:60'],
             'color' => ['required', 'string', 'max:60'],
-            'image' => ['required', 'string', 'max:2048'],
+            // Required only when nothing has been uploaded in its place.
+            'image' => [$this->hasFile('image_file') ? 'nullable' : 'required', 'string', 'max:2048'],
+            'image_file' => self::IMAGE_RULES,
             'gallery' => ['present', 'array'],
             'gallery.*' => ['required', 'string', 'max:2048'],
+            'gallery_files' => ['nullable', 'array', 'max:10'],
+            'gallery_files.*' => self::IMAGE_RULES,
             'specs' => ['present', 'array'],
             'specs.*.label' => ['required_with:specs.*.value', 'string', 'max:60'],
             'specs.*.value' => ['required_with:specs.*.label', 'string', 'max:160'],
@@ -93,8 +109,12 @@ class ProductRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'image.required' => 'Add a main image path or URL so the product has a photo.',
+            'image.required' => 'Upload an image or add a main image path so the product has a photo.',
+            'image_file.mimes' => 'Upload a JPG, PNG, WebP, GIF or AVIF image.',
+            'image_file.max' => 'Keep the main image under 5 MB.',
             'gallery.present' => 'Provide a gallery (it can be empty).',
+            'gallery_files.*.mimes' => 'Gallery images must be JPG, PNG, WebP, GIF or AVIF.',
+            'gallery_files.*.max' => 'Keep every gallery image under 5 MB.',
             'marketplace_url.url' => 'The marketplace link must be a full URL, for example https://shopee.co.id/...',
             'sale_price.lt' => 'The sale price must be lower than the regular price.',
             'sale_price.integer' => 'The sale price must be a whole number of dollars.',

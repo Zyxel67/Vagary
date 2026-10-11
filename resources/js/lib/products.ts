@@ -44,3 +44,22 @@ export const effectivePrice = (product: Pick<Product, 'price' | 'sale_price'>) =
 
 /** Whether a product is genuinely discounted below its list price. */
 export const isDiscounted = (product: Pick<Product, 'price' | 'sale_price'>) => product.sale_price !== null && product.sale_price < product.price;
+
+/**
+ * Turns an image value into something safe to put in an `<img src>`.
+ *
+ * Uploaded files and seeded catalogue images are already absolute paths
+ * (`/storage/products/...`, `/images/case/...`), so they pass straight
+ * through. Anything else is treated as a storage-relative filename.
+ */
+export const resolveImageUrl = (value: string | null | undefined): string => {
+    if (!value) {
+        return '';
+    }
+
+    if (value.startsWith('/') || /^(https?:)?\/\//.test(value) || value.startsWith('data:')) {
+        return value;
+    }
+
+    return `/storage/${value}`;
+};
