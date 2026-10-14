@@ -21,13 +21,16 @@ class ProductSeeder extends Seeder
     }
 
     /**
-     * Build the starter catalogue, mirroring the images shipped in public/images/case.
+     * Build the starter catalogue, mirroring the images shipped in public/images/Case.
+     *
+     * The folder is capitalised `Case` on disk; the path must match exactly
+     * because it is case-sensitive on Linux, unlike on Windows.
      *
      * @return list<array<string, mixed>>
      */
     private function catalogue(): array
     {
-        $caseImage = static fn (string $folder, string $file): string => '/images/case/'.rawurlencode($folder).'/'.rawurlencode($file);
+        $caseImage = static fn (string $folder, string $file): string => '/images/Case/'.rawurlencode($folder).'/'.rawurlencode($file);
 
         return [
             [

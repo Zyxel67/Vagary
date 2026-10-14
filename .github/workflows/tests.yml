@@ -50,4 +50,16 @@ jobs:
         run: php artisan key:generate
 
       - name: Tests
-        run: ./vendor/bin/pest
+        run: ./vendor/bin/pest 2>&1 | tee pest-output.txt
+
+      - name: Publish test failures to the run summary
+        if: failure()
+        run: |
+          {
+            echo "### Test failures on \`$(git rev-parse --short HEAD)\`"
+            echo '```'
+            grep -nE '^(FAIL|  FAIL)|FAILED|Expected|Failed asserting|Error|Exception' pest-output.txt | tail -n 60
+            echo '--- last 80 lines ---'
+            tail -n 80 pest-output.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
