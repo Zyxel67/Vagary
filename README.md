@@ -118,6 +118,20 @@ MAIL_FROM_NAME="Vagary"
 
 Only accounts that opt in at **Settings → Notifications** are ever emailed.
 
+Every marketing email carries:
+
+- a **Notification settings** button, and
+- `List-Unsubscribe` / `List-Unsubscribe-Post` headers so Gmail and Outlook can
+  show their own Unsubscribe link.
+
+One-click unsubscribe hits a **signed** URL rather than a logged-in session (the POST
+comes from the mail provider's servers), so that route is exempted from CSRF
+verification in `bootstrap/app.php` — its protection is the HMAC signature.
+
+Promos sent from the admin tab are recorded in the `promos` table with their audience
+size and sender, and an identical subject + body inside ten minutes is refused rather
+than sent twice.
+
 ## Tests
 
 ```bash

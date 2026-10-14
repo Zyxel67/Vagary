@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Product;
+use App\Notifications\Concerns\SendsMarketingEmail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -15,7 +16,7 @@ use Illuminate\Notifications\Notification;
  */
 class ProductPriceDropNotification extends Notification
 {
-    use Queueable;
+    use Queueable, SendsMarketingEmail;
 
     public function __construct(
         public Product $product,
@@ -35,7 +36,7 @@ class ProductPriceDropNotification extends Notification
     {
         $saving = $this->previousPrice - $this->newPrice;
 
-        return (new MailMessage)
+        $mail = (new MailMessage)
             ->subject('Price drop: '.$this->product->name.' is now '.$this->money($this->newPrice))
             ->greeting('Hello '.$notifiable->name.',')
             ->line('The '.$this->product->name.' you saved has just dropped in price.')
@@ -44,8 +45,9 @@ class ProductPriceDropNotification extends Notification
                 .' — you save '.$this->money($saving).'.'
             )
             ->action('See the new price', $this->productUrl())
-            ->line('Prices can change at any time, so grab it if it fits.')
-            ->line('You can change what we email you about from your notification settings.');
+            ->line('Prices can change at any time, so grab it if it fits.');
+
+        return $this->withMarketingFooter($mail, $notifiable);
     }
 
     /**

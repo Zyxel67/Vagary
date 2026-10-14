@@ -15,6 +15,16 @@ type PromoStats = {
     total: number;
 };
 
+type SentPromo = {
+    id: number;
+    subject: string;
+    recipients: number;
+    sent_by: string;
+    sent_at: string | null;
+};
+
+const sentAt = (iso: string | null) => (iso ? new Date(iso).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' }) : '—');
+
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Promos',
@@ -22,7 +32,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function AdminPromos({ stats }: { stats: PromoStats }) {
+export default function AdminPromos({ stats, recent }: { stats: PromoStats; recent: SentPromo[] }) {
     const { flash } = usePage<SharedData>().props;
 
     const { data, setData, post, processing, reset, errors } = useForm({
@@ -173,6 +183,52 @@ export default function AdminPromos({ stats }: { stats: PromoStats }) {
                         </Button>
                     </div>
                 </form>
+
+                <section className="rounded-2xl border border-black/10 bg-white/85 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-neutral-900/80">
+                    <header className="border-b border-black/10 px-5 py-4 dark:border-white/10">
+                        <h2 className="text-sm font-bold tracking-[-0.02em]">Recently sent</h2>
+                        <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                            Every promo that has gone out, and the audience it reached.
+                        </p>
+                    </header>
+
+                    {recent.length === 0 ? (
+                        <p className="px-5 py-10 text-center text-sm text-neutral-500 dark:text-neutral-400">
+                            Nothing sent yet. Your first promo will be listed here.
+                        </p>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full min-w-[560px] text-left text-sm">
+                                <thead className="border-b border-black/10 text-[11px] tracking-[0.16em] text-neutral-500 uppercase dark:border-white/10 dark:text-neutral-400">
+                                    <tr>
+                                        <th scope="col" className="px-5 py-3 font-semibold">
+                                            Subject
+                                        </th>
+                                        <th scope="col" className="px-5 py-3 font-semibold">
+                                            Recipients
+                                        </th>
+                                        <th scope="col" className="px-5 py-3 font-semibold">
+                                            Sent by
+                                        </th>
+                                        <th scope="col" className="px-5 py-3 font-semibold">
+                                            Sent
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {recent.map((promo) => (
+                                        <tr key={promo.id} className="border-b border-black/5 last:border-0 dark:border-white/5">
+                                            <td className="max-w-[24rem] truncate px-5 py-3 font-semibold">{promo.subject}</td>
+                                            <td className="px-5 py-3">{promo.recipients}</td>
+                                            <td className="px-5 py-3 text-neutral-600 dark:text-neutral-300">{promo.sent_by}</td>
+                                            <td className="px-5 py-3 text-neutral-600 dark:text-neutral-300">{sentAt(promo.sent_at)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </section>
             </div>
         </AppLayout>
     );

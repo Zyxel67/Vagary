@@ -17,6 +17,13 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
+
+        // One-click unsubscribe. The mail provider's POST carries no CSRF
+        // token, so this route is exempted — its own protection is the HMAC
+        // signature minted with APP_KEY, and all it can do is opt somebody out.
+        $middleware->validateCsrfTokens(except: [
+            'email/unsubscribe/*',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

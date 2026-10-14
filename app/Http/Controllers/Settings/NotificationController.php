@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -35,5 +36,21 @@ class NotificationController extends Controller
         $request->user()->update($validated);
 
         return to_route('notifications.edit');
+    }
+
+    /**
+     * Turn off marketing email for an account, via a signed one-click link.
+     *
+     * Deliberately idempotent and reachable without a session — a mail client
+     * clicking "Unsubscribe" must never depend on the reader being logged in.
+     */
+    public function unsubscribe(User $user): RedirectResponse
+    {
+        $user->update(['email_opt_in' => false]);
+
+        return to_route('notifications.edit')->with(
+            'success',
+            'Email notifications have been switched off for '.$user->email.'.',
+        );
     }
 }

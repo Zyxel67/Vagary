@@ -6,6 +6,17 @@ use App\Http\Controllers\Settings\ProfileController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
+/*
+ | One-click unsubscribe, as used by the List-Unsubscribe header.
+ |
+ | Signed rather than authenticated: the POST arrives from the mail provider's
+ | servers, not from a browser with a session. The signature proves Laravel
+ | generated the link, and the target is only ever an opt-out.
+ */
+Route::post('email/unsubscribe/{user}', [NotificationController::class, 'unsubscribe'])
+    ->middleware(['signed', 'throttle:10,1'])
+    ->name('email.unsubscribe');
+
 Route::middleware('auth')->group(function () {
     Route::redirect('settings', 'settings/profile');
 

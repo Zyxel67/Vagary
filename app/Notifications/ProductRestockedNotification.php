@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Product;
+use App\Notifications\Concerns\SendsMarketingEmail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -16,7 +17,7 @@ use Illuminate\Notifications\Notification;
  */
 class ProductRestockedNotification extends Notification
 {
-    use Queueable;
+    use Queueable, SendsMarketingEmail;
 
     public function __construct(public Product $product) {}
 
@@ -32,14 +33,15 @@ class ProductRestockedNotification extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)
+        $mail = (new MailMessage)
             ->subject("Back in stock: {$this->product->name}")
             ->greeting("Hello {$notifiable->name},")
             ->line("Good news — the {$this->product->name} leather case is back in stock.")
             ->line('You saved it to your wishlist, so we wanted to tell you first.')
             ->action('View the product', $this->productUrl())
-            ->line('Get it while stocks last.')
-            ->line('You can change what we email you about from your notification settings.');
+            ->line('Get it while stocks last.');
+
+        return $this->withMarketingFooter($mail, $notifiable);
     }
 
     /**

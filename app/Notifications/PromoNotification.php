@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Notifications\Concerns\SendsMarketingEmail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -14,7 +15,7 @@ use Illuminate\Notifications\Notification;
  */
 class PromoNotification extends Notification
 {
-    use Queueable;
+    use Queueable, SendsMarketingEmail;
 
     public function __construct(
         public string $subject,
@@ -42,7 +43,7 @@ class PromoNotification extends Notification
             $mail->action($this->ctaLabel, $this->url);
         }
 
-        return $mail->line('You can change what we email you about from your notification settings.');
+        return $this->withMarketingFooter($mail, $notifiable);
     }
 
     /**

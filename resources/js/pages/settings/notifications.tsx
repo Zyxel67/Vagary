@@ -32,7 +32,7 @@ const emailTypes = [
 ];
 
 export default function Notifications() {
-    const { auth } = usePage<SharedData>().props;
+    const { auth, flash } = usePage<SharedData>().props;
 
     const { data, setData, patch, processing, errors, recentlySuccessful } = useForm({
         email_opt_in: Boolean(auth.user.email_opt_in),
@@ -50,6 +50,13 @@ export default function Notifications() {
             <SettingsLayout>
                 <div className="space-y-6">
                     <HeadingSmall title="Email notifications" description="Choose whether we email you about the things you save" />
+
+                    {flash?.success && (
+                        <div className="flex items-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-800 dark:text-emerald-300">
+                            <CheckCircle2 className="h-4 w-4 shrink-0" />
+                            {flash.success}
+                        </div>
+                    )}
 
                     <form onSubmit={submit} className="space-y-6">
                         <section className="rounded-2xl border border-black/10 bg-white/85 p-5 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-neutral-900/80">
