@@ -132,6 +132,47 @@ Promos sent from the admin tab are recorded in the `promos` table with their aud
 size and sender, and an identical subject + body inside ten minutes is refused rather
 than sent twice.
 
+## Deploying
+
+The app refuses to stay insecurely configured: when `APP_ENV=production`,
+`AppServiceProvider` **forces `APP_DEBUG` off** (stack traces would otherwise
+expose `APP_KEY` and database credentials) and writes a warning to the log if
+`MAIL_MAILER` is still `log` or `MAIL_FROM_ADDRESS` is still the Laravel
+placeholder.
+
+**1. Create the production env** (git-ignored — never commit it):
+
+```bash
+cp .env.production.example .env.production
+```
+
+**2. Fill in the four values that matter:**
+
+| Key | Value |
+| --- | --- |
+| `APP_URL` | Exact public URL, no trailing slash |
+| `GOOGLE_REDIRECT_URI` | `{APP_URL}/auth/google/callback` — must match Google Cloud Console → APIs & Credentials → Authorised redirect URIs |
+| `MAIL_USERNAME` / `MAIL_PASSWORD` | Gmail address and a 16-char **App Password** (`myaccount.google.com/apppasswords`) — your normal password will be rejected |
+| `MAIL_FROM_ADDRESS` | A real sender on your domain |
+
+> Reserved TLDs (`.test`, `.local`) are refused by Google for the redirect URI.
+> Use a public domain, or `localhost` while developing.
+
+**3. Build and migrate:**
+
+```bash
+composer install --no-dev --optimize-autoloader
+npm ci && npm run build
+php artisan migrate --force
+php artisan config:cache && php artisan route:cache && php artisan view:cache
+```
+
+**4. Queue worker.** Notifications send synchronously so no worker is required
+at small volume. If you enable `ShouldQueue`, or send promos to a large list,
+run `php artisan queue:work` under a process manager.
+
+**5. Point the web server at `public/`** — never at the repository root.
+
 ## Tests
 
 ```bash

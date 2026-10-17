@@ -1,6 +1,8 @@
 <?php
 
-/** @var \Tests\TestCase $this */
+use Tests\TestCase;
+
+/** @var TestCase $this */
 
 /*
  | Inertia's upstream default is resources/js/Pages, but this project keeps

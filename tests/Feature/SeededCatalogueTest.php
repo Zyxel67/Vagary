@@ -1,9 +1,10 @@
 <?php
 
-/** @var \Tests\TestCase $this */
+/** @var TestCase $this */
 
 use App\Models\Product;
 use Database\Seeders\ProductSeeder;
+use Tests\TestCase;
 
 /**
  * Resolves every image path a product would render and returns the ones that
